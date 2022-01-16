@@ -1,0 +1,16 @@
+﻿
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+    height: 5000px;
+    overflow: auto;
+}
+
+/* Scale canvas with resize attribute to full size */
+
+canvas[resize] {
+    width: 4900px;
+    height: 4900px;
+    overflow: auto;
+}
