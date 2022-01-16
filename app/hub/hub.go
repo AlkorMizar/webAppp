@@ -1,64 +1,18 @@
 package hub
 
 import (
-	"container/list"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/AlkorMizar/WebApp/app/dao/factory"
 	"github.com/AlkorMizar/WebApp/app/models"
+	"github.com/AlkorMizar/WebApp/app/structs"
 	"github.com/gorilla/websocket"
 )
 
-type myList struct {
-	*list.List
-	lock sync.RWMutex
-}
-
-func newMyList() (l myList) {
-	l.List = list.New()
-	return
-}
-
-func (l *myList) add(v interface{}) *list.Element {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	return l.PushBack(v)
-}
-
-func (l *myList) removeEl(c *list.Element) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	l.Remove(c)
-}
-
-func (l *myList) remove(v interface{}) {
-	l.lock.RLock()
-	e := l.Front()
-	for ; e != nil && e.Value != v; e = e.Next() {
-	}
-	l.lock.RUnlock()
-
-	if e != nil {
-		l.removeEl(e)
-	}
-}
-
-func (l *myList) getSlice() (sl []interface{}) {
-	sl = make([]interface{}, l.Len())
-	i := 0
-	l.lock.RLock()
-	defer l.lock.RUnlock()
-	for e := l.Front(); e != nil; e = e.Next() {
-		sl[i] = e.Value
-	}
-	return
-}
-
 type Hub struct {
-	users       myList
-	lockedElems myList
+	users       structs.List
+	lockedElems structs.List
 	msgHandlers [size]msgHandler
 }
 
@@ -70,8 +24,8 @@ var upgrader = websocket.Upgrader{
 var dao = factory.FactoryDao("mysql")
 
 func NewHub() (h Hub) {
-	h.users = newMyList()
-	h.lockedElems = newMyList()
+	h.users = structs.NewList()
+	h.lockedElems = structs.NewList()
 
 	h.msgHandlers[addSvg] = func(msg JsonBodyStruct) (MsgForSend, error) {
 		return changePosF(msg.Name, msg.X, msg.Y, msg.Content)
@@ -122,11 +76,12 @@ func (h *Hub) AddConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	el := h.users.add(c)
-
+	el := h.users.Add(c)
+	log.Println("connected ", c)
 	defer func() {
-		h.users.removeEl(el)
+		h.users.List.Remove(el)
 		c.Close()
+		log.Println("dissconnected ", c)
 	}()
 
 	for {
@@ -247,7 +202,7 @@ func changePosOfNote(name string, x float64, y float64, html string) (msg MsgFor
 }
 
 func (h *Hub) lockElemF(name string) (msg MsgForSend, e error) {
-	h.lockedElems.add(name)
+	h.lockedElems.Add(name)
 	msg.forWhom = others
 	msg.Type = addLock
 	msg.Body.Name = name
@@ -255,7 +210,7 @@ func (h *Hub) lockElemF(name string) (msg MsgForSend, e error) {
 }
 
 func (h *Hub) unlockElemF(name string) (msg MsgForSend, e error) {
-	h.lockedElems.remove(name)
+	h.lockedElems.RemoveByVal(name)
 	msg.forWhom = others
 	msg.Type = unlock
 	msg.Body.Name = name
@@ -265,8 +220,8 @@ func (h *Hub) unlockElemF(name string) (msg MsgForSend, e error) {
 func (h *Hub) getLockedF() (msg MsgForSend, e error) {
 	msg.forWhom = caller
 	msg.Type = setLocked
-	msg.Body.List = h.lockedElems.getSlice()
-	log.Println(h.lockedElems.getSlice())
+	msg.Body.List = h.lockedElems.GetSlice()
+	log.Println(h.lockedElems.GetSlice())
 	return msg, nil
 }
 

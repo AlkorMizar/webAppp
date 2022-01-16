@@ -8,12 +8,13 @@ import (
 
 type List struct {
 	*list.List
-	lock sync.RWMutex
+	lock *sync.RWMutex
 }
 
-func NewList() (l *List) {
-	l = &List{}
+func NewList() (l List) {
+	l = List{}
 	l.List = list.New()
+	l.lock = &sync.RWMutex{}
 	log.Println(l)
 	return
 }
@@ -30,7 +31,7 @@ func (l *List) removeEl(c *list.Element) {
 	l.Remove(c)
 }
 
-func (l *List) Remove(v interface{}) {
+func (l *List) RemoveByVal(v interface{}) {
 	l.lock.RLock()
 	e := l.Front()
 	for ; e != nil && e.Value != v; e = e.Next() {

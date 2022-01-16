@@ -387,6 +387,7 @@ window.onload = function() {
 
 
     function setText(event, bounds, text) {
+        console.log("setting text",text)
         var pos = $("#parent-div").position();
         var textarea = $(
             "<textarea class='dynamic-textarea' " +
@@ -399,7 +400,9 @@ window.onload = function() {
         textarea.focus();
     
         textarea.focusout(function (e) {
+            console.log("focusot")
             if (e.target.value.trim() != "") {
+                console.log(e.target.value)
                 var pos = $("#parent-div").position();
                 var y = $(e.target).position().top - pos.top + 16
                 var x = $(e.target).position().left - pos.left
@@ -416,7 +419,7 @@ window.onload = function() {
                 value = e.target.value;
                 var svg = text.exportSVG({ asString: true });
                 connection.send(JSON.stringify(
-                    {type:createFromSvg,
+                    {type:createFromSVG,
                      body:{
                          name:text.name,
                          content:svg
